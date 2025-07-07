@@ -10,7 +10,7 @@ Kaptan ipucu verir, takım arkadaşları kelimeleri bulmaya çalışır. Eğlenc
  
 🧩 5x5 Oyun Tahtası ve Gizli Kelime Rolleri  
 👥 Kırmızı ve Mavi Takımlar, Kaptan ve Oyuncu Rolleri  
-🗃️ Oda Sistemi ile Çoklu Oyun Yönetimi  
+🗃️ Oda Sistemi  
 🔐 Django Admin Paneli Üzerinden Kullanıcı Kontrolü  
 🌐 REST API Entegrasyonu ile React Arayüzü
 
@@ -22,7 +22,7 @@ Kaptan ipucu verir, takım arkadaşları kelimeleri bulmaya çalışır. Eğlenc
 🔌 **Django REST Framework** – API geliştirme  
 ⚛️ **React** – Modern frontend kütüphanesi  
 🗃️ **PostgreSQL** – Güçlü ilişkisel veritabanı yönetimi  
-🖥️ **Django Admin Paneli** – Veri ve kullanıcı kontrolü
+🖥️ **Django Admin Paneli** – Kullanıcı kontrolü
 
 ---
 
@@ -53,11 +53,15 @@ Projeyi kendi bilgisayarınızda çalıştırmak için:
 ```bash
 git clone https://github.com/busrahakay/codenames.git
 cd codenames
+cd backend
 python -m venv env
 env\Scripts\activate  # (Mac/Linux için: source env/bin/activate)
 pip install -r requirements.txt
 python manage.py makemigrations
 python manage.py migrate
 python manage.py runserver
+cd ..
+cd frontend
+npm start
 ```
 🔧 Uygulama arayüz görselleri için interface_images dosyasını inceleyin!
