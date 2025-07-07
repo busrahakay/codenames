@@ -1,4 +1,4 @@
-# 🧠 CennetCode (Codenames) – Takım Tabanlı Sözcük Tahmin Oyunu
+# 🧠 CennetCode (Codenames) – Sözcük Tahmin Oyunu
 
 Kelime oyunlarına farklı bir boyut!  
 Codenames, iki takım arasında geçen, ipuçları ve tahminlerle ilerleyen çok oyunculu bir sözcük tahmin oyunudur.  
