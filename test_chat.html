@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: linear-gradient(120deg, #fc575e 0%, #f7b42c 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .chat-test {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .message {
+            background: #f0f0f0;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+        }
+        .message.own {
+            background: #e3f2fd;
+            text-align: right;
+        }
+        .message.system {
+            background: #fff3cd;
+            font-style: italic;
+        }
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        input[type="text"] {
+            width: 70%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #fc575e;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 2px;
+        }
+        button:hover {
+            background: #e74c3c;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .log {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>CodeNames Chat Test</h1>
+        
+        <div class="chat-test">
+            <h3>WebSocket Bağlantı Testi</h3>
+            <div id="status" class="status disconnected">Bağlantı yok</div>
+            
+            <div id="messages" style="height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin: 10px 0;">
+                <div class="message system">Chat testi başlatıldı...</div>
+            </div>
+            
+            <div>
+                <input type="text" id="messageInput" placeholder="Mesajınızı yazın..." />
+                <button onclick="sendMessage()">Gönder</button>
+                <button onclick="connectWebSocket()">Bağlan</button>
+                <button onclick="disconnectWebSocket()">Bağlantıyı Kes</button>
+                <button onclick="ping()">Ping</button>
+            </div>
+            
+            <div class="log" id="log">
+                <div>Log başlatıldı...</div>
+            </div>
+        </div>
+        
+        <div class="chat-test">
+            <h3>API Test</h3>
+            <button onclick="testCreateMessage()">Test Mesajı Oluştur</button>
+            <button onclick="testGetMessages()">Mesajları Getir</button>
+            <button onclick="testCreateRoom()">Test Odası Oluştur</button>
+            <div id="apiResult" style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 5px;"></div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        const roomName = 'test-room';
+        const API_URL = 'http://localhost:8000/api';
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `<div>[${time}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function connectWebSocket() {
+            const wsUrl = `ws://localhost:8000/ws/game/${roomName}/`;
+            log(`WebSocket bağlantısı kuruluyor: ${wsUrl}`);
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = function() {
+                updateStatus('Bağlandı', true);
+                addMessage('WebSocket bağlantısı kuruldu', 'system');
+                log('WebSocket bağlantısı başarılı');
+            };
+
+            ws.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    log(`Mesaj alındı: ${JSON.stringify(data)}`);
+                    
+                    if (data.type === 'connection_established') {
+                        addMessage(`Bağlantı onaylandı: ${data.room}`, 'system');
+                    } else if (data.type === 'chat_message') {
+                        addMessage(`${data.message.user?.username || 'Sistem'}: ${data.message.message}`, 'received');
+                    } else if (data.type === 'game_state') {
+                        addMessage('Oyun durumu güncellendi', 'system');
+                    } else if (data.type === 'error') {
+                        addMessage(`Hata: ${data.message}`, 'error');
+                    } else if (data.type === 'pong') {
+                        addMessage('Ping-pong başarılı', 'system');
+                    }
+                } catch (error) {
+                    log(`Mesaj parse hatası: ${error}`);
+                    addMessage('Mesaj parse hatası', 'error');
+                }
+            };
+
+            ws.onclose = function(event) {
+                updateStatus('Bağlantı kesildi', false);
+                addMessage(`WebSocket bağlantısı kapandı (${event.code})`, 'system');
+                log(`WebSocket kapandı: ${event.code} - ${event.reason}`);
+            };
+
+            ws.onerror = function(error) {
+                updateStatus('Bağlantı hatası', false);
+                addMessage('WebSocket hatası oluştu', 'error');
+                log(`WebSocket hatası: ${error}`);
+            };
+        }
+
+        function disconnectWebSocket() {
+            if (ws) {
+                ws.close();
+                ws = null;
+                log('WebSocket bağlantısı manuel olarak kesildi');
+            }
+        }
+
+        function ping() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ action: 'ping' }));
+                log('Ping gönderildi');
+            } else {
+                log('Ping gönderilemedi - bağlantı yok');
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (message && ws && ws.readyState === WebSocket.OPEN) {
+                const messageData = {
+                    action: 'send_message',
+                    message: message,
+                    user_id: 1,
+                    message_type: 'CHAT'
+                };
+                
+                ws.send(JSON.stringify(messageData));
+                log(`Mesaj gönderildi: ${message}`);
+                
+                addMessage(`Sen: ${message}`, 'own');
+                input.value = '';
+            } else if (!ws || ws.readyState !== WebSocket.OPEN) {
+                addMessage('WebSocket bağlantısı yok!', 'error');
+                log('Mesaj gönderilemedi - bağlantı yok');
+            }
+        }
+
+        function addMessage(text, type) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.textContent = text;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function updateStatus(text, connected) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = text;
+            statusDiv.className = `status ${connected ? 'connected' : 'disconnected'}`;
+        }
+
+        function testCreateMessage() {
+            fetch(`${API_URL}/chat/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    room: 1, // Test oda ID'si
+                    username: 'TestKullanici',
+                    message: 'API test mesajı',
+                    message_type: 'CHAT'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('apiResult').textContent = 'Mesaj oluşturuldu: ' + JSON.stringify(data, null, 2);
+                log('API mesaj oluşturma başarılı');
+            })
+            .catch(error => {
+                document.getElementById('apiResult').textContent = 'Hata: ' + error.message;
+                log(`API mesaj oluşturma hatası: ${error.message}`);
+            });
+        }
+
+        function testGetMessages() {
+            fetch(`${API_URL}/chat/?room=1`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('apiResult').textContent = 'Mesajlar: ' + JSON.stringify(data, null, 2);
+                log('API mesaj getirme başarılı');
+            })
+            .catch(error => {
+                document.getElementById('apiResult').textContent = 'Hata: ' + error.message;
+                log(`API mesaj getirme hatası: ${error.message}`);
+            });
+        }
+
+        function testCreateRoom() {
+            fetch(`${API_URL}/rooms/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: 'test-room-' + Date.now()
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('apiResult').textContent = 'Oda oluşturuldu: ' + JSON.stringify(data, null, 2);
+                log('API oda oluşturma başarılı');
+            })
+            .catch(error => {
+                document.getElementById('apiResult').textContent = 'Hata: ' + error.message;
+                log(`API oda oluşturma hatası: ${error.message}`);
+            });
+        }
+
+        // Enter tuşu ile mesaj gönderme
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Sayfa yüklendiğinde log başlat
+        log('Test sayfası yüklendi');
+    </script>
+</body>
+</html> 
