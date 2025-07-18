@@ -216,7 +216,3 @@ Chat özelliğini test etmek için `test_chat.html` dosyasını kullanabilirsini
 2. Feature branch oluşturun
 3. Değişikliklerinizi commit edin
 4. Pull request gönderin
-
-## Lisans
-
-Bu proje MIT lisansı altında lisanslanmıştır. 
