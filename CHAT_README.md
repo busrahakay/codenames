@@ -216,3 +216,5 @@ Chat özelliğini test etmek için `test_chat.html` dosyasını kullanabilirsini
 2. Feature branch oluşturun
 3. Değişikliklerinizi commit edin
 4. Pull request gönderin
+
+🔧 Uygulama arayüz görselleri için interface_images dosyasını inceleyin!
